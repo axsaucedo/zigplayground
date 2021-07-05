@@ -32,3 +32,63 @@ test "error union yes error" {
     try expect(err_yes == other_val);
 }
 
+fn failingFunction() error{Oops}!void {
+    return error.Oops;
+}
+
+test "returning an error" {
+    failingFunction() catch |err| {
+        // try x is a shortcut for x catch |err| return err
+        try expect(err == error.Oops);
+        return;
+    };
+}
+
+fn failFn() error{Oops}!i32 {
+    try failingFunction();
+    return 12;
+}
+
+test "testing try" {
+    var v = failFn() catch |err| {
+        try expect(err == error.Oops);
+        return;
+    };
+    try expect(v == 13); // Never reached
+}
+
+var problems: u32 = 98;
+
+fn failFnCounter() error{Oops}!void {
+    errdefer problems += 1;
+    try failingFunction();
+}
+
+test "errdefer" {
+    failFnCounter() catch |err| {
+        try expect(err == error.Oops);
+        try expect(problems == 99);
+        return;
+    };
+}
+
+fn createFile() !void {
+    return error.AccessDenied;
+}
+
+test "inferred error set" {
+    const x: error{AccessDenied}!void = createFile();
+}
+
+fn increment(num: *u8) void {
+    num.* += 1;
+}
+
+test "pointers" {
+    var x: u8 = 1;
+    increment(&x);
+    try expect(x == 2);
+}
+
+
+
